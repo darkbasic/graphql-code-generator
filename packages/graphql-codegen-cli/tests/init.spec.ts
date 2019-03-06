@@ -28,12 +28,18 @@ const packageJson = {
     dependencies: {
       react: 'x.x.x'
     }
+  }),
+  withStencil: JSON.stringify({
+    version,
+    dependencies: {
+      '@stencil/core': 'x.x.x'
+    }
   })
 };
 
 describe('init', () => {
   beforeEach(() => {
-    // make sure we don't get noisy terminal
+    // make sure terminal don't get noisy
     jest.spyOn(process.stdout, 'write').mockImplementation();
   });
 
@@ -42,22 +48,28 @@ describe('init', () => {
     jest.clearAllMocks();
   });
 
-  it('should guess angular project', async () => {
+  it('should guess angular projects', async () => {
     require('fs').__setMockFiles(resolve(process.cwd(), 'package.json'), packageJson.withAngular);
     const targets = await init.guessTargets();
     expect(targets.Angular).toEqual(true);
   });
 
-  it('should guess typescript project', async () => {
+  it('should guess typescript projects', async () => {
     require('fs').__setMockFiles(resolve(process.cwd(), 'package.json'), packageJson.withTypescript);
     const targets = await init.guessTargets();
     expect(targets.TypeScript).toEqual(true);
   });
 
-  it('should guess react project', async () => {
+  it('should guess react projects', async () => {
     require('fs').__setMockFiles(resolve(process.cwd(), 'package.json'), packageJson.withReact);
     const targets = await init.guessTargets();
     expect(targets.React).toEqual(true);
+  });
+
+  it('should guess stencil projects', async () => {
+    require('fs').__setMockFiles(resolve(process.cwd(), 'package.json'), packageJson.withStencil);
+    const targets = await init.guessTargets();
+    expect(targets.Stencil).toEqual(true);
   });
 
   it('should use angular related plugins when @angular/core is found', async () => {
@@ -142,6 +154,49 @@ describe('init', () => {
     expect(pkg.devDependencies).toHaveProperty('graphql-codegen-typescript');
     expect(pkg.devDependencies).toHaveProperty('graphql-codegen-typescript-operations');
     expect(pkg.devDependencies).toHaveProperty('graphql-codegen-typescript-react-apollo');
+    // should not have other plugins
+    expect(Object.keys(pkg.devDependencies)).toHaveLength(3);
+  });
+
+  it('should use stencil related plugins when @stencil/core is found', async () => {
+    const fs = require('fs');
+    fs.__setMockFiles(resolve(process.cwd(), 'package.json'), packageJson.withStencil);
+    // make sure we don't write stuff
+    const writeFileSpy = jest.spyOn(fs, 'writeFileSync').mockImplementation();
+    // silent
+    jest.spyOn(console, 'log').mockImplementation();
+
+    useInputs({
+      onTarget: [ENTER], // confirm angular target
+      onSchema: [ENTER], // use default
+      onDocuments: [ENTER],
+      onPlugins: [ENTER], // use selected packages
+      onOutput: [ENTER], // use default output path
+      onIntrospection: ['n', ENTER], // no introspection,
+      onConfig: [ENTER], // use default config path
+      onScript: ['graphql', ENTER] // use custom npm script
+    });
+
+    await init.init();
+
+    expect(writeFileSpy).toHaveBeenCalledTimes(2);
+
+    const pkg = JSON.parse(writeFileSpy.mock.calls[1][1] as string);
+    const config = parseConfigFile(writeFileSpy.mock.calls[0][1] as string);
+
+    // should use default output path
+    expect(config.generates['src/generated/graphql.ts']).toBeDefined();
+
+    const output: any = config.generates['src/generated/graphql.ts'];
+    expect(output.plugins).toContainEqual('typescript');
+    expect(output.plugins).toContainEqual('typescript-operations');
+    expect(output.plugins).toContainEqual('typescript-stencil-apollo');
+    expect(output.plugins).toHaveLength(3);
+
+    // expected plugins
+    expect(pkg.devDependencies).toHaveProperty('graphql-codegen-typescript');
+    expect(pkg.devDependencies).toHaveProperty('graphql-codegen-typescript-operations');
+    expect(pkg.devDependencies).toHaveProperty('graphql-codegen-typescript-stencil-apollo');
     // should not have other plugins
     expect(Object.keys(pkg.devDependencies)).toHaveLength(3);
   });
@@ -280,7 +335,7 @@ describe('init', () => {
       onDocuments: [documents, ENTER],
       onPlugins: [ENTER], // use selected packages
       onOutput: [ENTER], // use default output path
-      onIntrospection: ['n', ENTER], // no introspection,
+      onIntrospection: ['y', ENTER], // no introspection,
       onConfig: [ENTER], // use default config path
       onScript: [script, ENTER] // use custom npm script
     });
@@ -301,6 +356,8 @@ describe('init', () => {
     expect(config.documents).toEqual(documents);
     // should use default output path
     expect(config.generates['src/generated/graphql.ts']).toBeDefined();
+    // should include introspection
+    expect(config.generates['./graphql.schema.json']).toBeDefined();
 
     const output: any = config.generates['src/generated/graphql.ts'];
     expect(output.plugins).toContainEqual('typescript');
@@ -349,6 +406,7 @@ describe('init', () => {
         .getApplicationTypeChoices({
           [init.Tags.angular]: targets.includes(init.Tags.angular),
           [init.Tags.react]: targets.includes(init.Tags.react),
+          [init.Tags.stencil]: targets.includes(init.Tags.stencil),
           [init.Tags.browser]: targets.includes(init.Tags.browser),
           [init.Tags.node]: targets.includes(init.Tags.node),
           [init.Tags.typescript]: targets.includes(init.Tags.typescript)
@@ -439,6 +497,23 @@ describe('init', () => {
       expect(selected).toContainEqual('typescript');
       expect(selected).toContainEqual('typescript-operations');
       expect(selected).toContainEqual('typescript-react-apollo');
+    });
+
+    it('stencil', () => {
+      const { selected, available } = getPlugins([init.Tags.stencil]);
+
+      // available
+      expect(available).toHaveLength(5);
+      expect(available).toContainEqual('typescript');
+      expect(available).toContainEqual('typescript-operations');
+      expect(available).toContainEqual('typescript-stencil-apollo');
+      expect(available).toContainEqual('typescript-graphql-files-modules');
+      expect(available).toContainEqual('fragment-matcher');
+      // selected
+      expect(selected).toHaveLength(3);
+      expect(selected).toContainEqual('typescript');
+      expect(selected).toContainEqual('typescript-operations');
+      expect(selected).toContainEqual('typescript-stencil-apollo');
     });
 
     it('vanilla', () => {

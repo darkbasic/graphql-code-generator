@@ -19,6 +19,7 @@ export enum Tags {
   node = 'Node',
   typescript = 'TypeScript',
   angular = 'Angular',
+  stencil = 'Stencil',
   react = 'React'
 }
 
@@ -34,7 +35,7 @@ export const plugins: Array<PluginOption> = [
     package: 'graphql-codegen-typescript',
     value: 'typescript',
     available: () => true,
-    shouldBeSelected: tags => tags.includes(Tags.angular) || tags.includes(Tags.react) || tags.includes(Tags.typescript)
+    shouldBeSelected: tags => oneOf(tags, Tags.angular, Tags.stencil, Tags.react, Tags.typescript)
   },
   {
     name: `TypeScript Operations ${chalk.italic('(operations and fragments)')}`,
@@ -42,19 +43,17 @@ export const plugins: Array<PluginOption> = [
     value: 'typescript-operations',
     available: hasTag(Tags.browser),
     shouldBeSelected: tags =>
-      tags.includes(Tags.angular) ||
-      tags.includes(Tags.react) ||
-      (tags.includes(Tags.typescript) && tags.includes(Tags.browser))
+      oneOf(tags, Tags.angular, Tags.stencil, Tags.react) || allOf(tags, Tags.typescript, Tags.browser)
   },
   {
     name: `TypeScript Resolvers ${chalk.italic('(strongly typed resolve functions)')}`,
     package: 'graphql-codegen-typescript-resolvers',
     value: 'typescript-resolvers',
     available: hasTag(Tags.node),
-    shouldBeSelected: tags => tags.includes(Tags.typescript) && tags.includes(Tags.node)
+    shouldBeSelected: tags => allOf(tags, Tags.typescript, Tags.node)
   },
   {
-    name: `TypeScript Apollo Angular ${chalk.italic('(GQL services)')}`,
+    name: `TypeScript Apollo Angular ${chalk.italic('(typed GQL services)')}`,
     package: 'graphql-codegen-typescript-apollo-angular',
     value: 'typescript-apollo-angular',
     available: hasTag(Tags.angular),
@@ -65,6 +64,13 @@ export const plugins: Array<PluginOption> = [
     package: 'graphql-codegen-typescript-react-apollo',
     value: 'typescript-react-apollo',
     available: hasTag(Tags.react),
+    shouldBeSelected: () => true
+  },
+  {
+    name: `TypeScript Stencil Apollo ${chalk.italic('(typed components)')}`,
+    package: 'graphql-codegen-typescript-stencil-apollo',
+    value: 'typescript-stencil-apollo',
+    available: hasTag(Tags.stencil),
     shouldBeSelected: () => true
   },
   {
@@ -291,6 +297,7 @@ export async function guessTargets(): Promise<Record<Tags, boolean>> {
   return {
     [Tags.angular]: isAngular(dependencies),
     [Tags.react]: isReact(dependencies),
+    [Tags.stencil]: isStencil(dependencies),
     [Tags.browser]: false,
     [Tags.node]: false,
     [Tags.typescript]: isTypescript(dependencies)
@@ -303,6 +310,10 @@ function isAngular(dependencies: string[]): boolean {
 
 function isReact(dependencies: string[]): boolean {
   return dependencies.includes('react');
+}
+
+function isStencil(dependencies: string[]): boolean {
+  return dependencies.includes('@stencil/core');
 }
 
 function isTypescript(dependencies: string[]): boolean {
@@ -346,10 +357,24 @@ export function getApplicationTypeChoices(possibleTargets: Record<Tags, boolean>
       checked: possibleTargets.React
     },
     {
+      name: 'Application built with Stencil',
+      key: 'react',
+      value: [Tags.stencil, Tags.browser, Tags.typescript],
+      checked: possibleTargets.Stencil
+    },
+    {
       name: 'Application built with other framework or vanilla JS',
       key: 'client',
       value: [Tags.browser, Tags.typescript],
-      checked: possibleTargets.Browser && !possibleTargets.Angular && !possibleTargets.React
+      checked: possibleTargets.Browser && !possibleTargets.Angular && !possibleTargets.React && !possibleTargets.Stencil
     }
   ];
+}
+
+function oneOf<T>(list: T[], ...items: T[]): boolean {
+  return list.some(i => items.includes(i));
+}
+
+function allOf<T>(list: T[], ...items: T[]): boolean {
+  return items.every(i => list.includes(i));
 }
