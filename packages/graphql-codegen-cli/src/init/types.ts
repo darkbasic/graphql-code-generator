@@ -1,0 +1,27 @@
+export interface PluginOption {
+  name: string;
+  package: string;
+  value: string;
+  available(tags: Tags[]): boolean;
+  shouldBeSelected(tags: Tags[]): boolean;
+}
+
+export interface Answers {
+  targets: Tags[];
+  config: string;
+  plugins: PluginOption[];
+  schema: string;
+  documents?: string;
+  output: string;
+  script: string;
+  introspection: boolean;
+}
+
+export enum Tags {
+  browser = 'Browser',
+  node = 'Node',
+  typescript = 'TypeScript',
+  angular = 'Angular',
+  stencil = 'Stencil',
+  react = 'React'
+}

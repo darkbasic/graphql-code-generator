@@ -2,8 +2,11 @@ jest.mock('fs');
 import * as bddStdin from 'bdd-stdin';
 import { resolve } from 'path';
 import chalk from 'chalk';
-import * as init from '../src/init';
+import { init } from '../src/init';
+import { Tags } from '../src/init/types';
+import { guessTargets } from '../src/init/targets';
 import { parseConfigFile } from '../src/yml';
+import { getApplicationTypeChoices, getPluginChoices } from '../src/init/questions';
 const { version } = require('../package.json');
 
 const SELECT = ' '; // checkbox
@@ -50,25 +53,25 @@ describe('init', () => {
 
   it('should guess angular projects', async () => {
     require('fs').__setMockFiles(resolve(process.cwd(), 'package.json'), packageJson.withAngular);
-    const targets = await init.guessTargets();
+    const targets = await guessTargets();
     expect(targets.Angular).toEqual(true);
   });
 
   it('should guess typescript projects', async () => {
     require('fs').__setMockFiles(resolve(process.cwd(), 'package.json'), packageJson.withTypescript);
-    const targets = await init.guessTargets();
+    const targets = await guessTargets();
     expect(targets.TypeScript).toEqual(true);
   });
 
   it('should guess react projects', async () => {
     require('fs').__setMockFiles(resolve(process.cwd(), 'package.json'), packageJson.withReact);
-    const targets = await init.guessTargets();
+    const targets = await guessTargets();
     expect(targets.React).toEqual(true);
   });
 
   it('should guess stencil projects', async () => {
     require('fs').__setMockFiles(resolve(process.cwd(), 'package.json'), packageJson.withStencil);
-    const targets = await init.guessTargets();
+    const targets = await guessTargets();
     expect(targets.Stencil).toEqual(true);
   });
 
@@ -91,7 +94,7 @@ describe('init', () => {
       onScript: ['graphql', ENTER] // use custom npm script
     });
 
-    await init.init();
+    await init();
 
     expect(writeFileSpy).toHaveBeenCalledTimes(2);
 
@@ -134,7 +137,7 @@ describe('init', () => {
       onScript: ['graphql', ENTER] // use custom npm script
     });
 
-    await init.init();
+    await init();
 
     expect(writeFileSpy).toHaveBeenCalledTimes(2);
 
@@ -177,7 +180,7 @@ describe('init', () => {
       onScript: ['graphql', ENTER] // use custom npm script
     });
 
-    await init.init();
+    await init();
 
     expect(writeFileSpy).toHaveBeenCalledTimes(2);
 
@@ -219,7 +222,7 @@ describe('init', () => {
       onScript: ['graphql', ENTER] // use custom npm script
     });
 
-    await init.init();
+    await init();
 
     expect(writeFileSpy).toHaveBeenCalledTimes(2);
 
@@ -265,7 +268,7 @@ describe('init', () => {
       onScript: ['graphql', ENTER] // use custom npm script
     });
 
-    await init.init();
+    await init();
 
     const configFile = writeFileSpy.mock.calls[0][0] as string;
     const config = parseConfigFile(writeFileSpy.mock.calls[0][1] as string);
@@ -305,7 +308,7 @@ describe('init', () => {
       onScript: [options.script, ENTER] // use custom npm script
     });
 
-    await init.init();
+    await init();
 
     const configFile = writeFileSpy.mock.calls[0][0] as string;
     const config = parseConfigFile(writeFileSpy.mock.calls[0][1] as string);
@@ -340,7 +343,7 @@ describe('init', () => {
       onScript: [script, ENTER] // use custom npm script
     });
 
-    await init.init();
+    await init();
 
     expect(writeFileSpy).toHaveBeenCalledTimes(2);
 
@@ -384,33 +387,29 @@ describe('init', () => {
   });
 
   describe('plugin choices', () => {
-    function getAvailable(tags: init.Tags[]): string[] {
-      return init
-        .getPluginChoices({
-          targets: tags
-        } as any)
-        .map((c: any) => c.value.value);
+    function getAvailable(tags: Tags[]): string[] {
+      return getPluginChoices({
+        targets: tags
+      } as any).map((c: any) => c.value.value);
     }
 
-    function getSelected(tags: init.Tags[]): string[] {
-      return init
-        .getPluginChoices({
-          targets: tags
-        } as any)
+    function getSelected(tags: Tags[]): string[] {
+      return getPluginChoices({
+        targets: tags
+      } as any)
         .filter((c: any) => c.checked)
         .map((c: any) => c.value.value);
     }
 
-    function getPlugins(targets: init.Tags[]) {
-      const tags: init.Tags[] = init
-        .getApplicationTypeChoices({
-          [init.Tags.angular]: targets.includes(init.Tags.angular),
-          [init.Tags.react]: targets.includes(init.Tags.react),
-          [init.Tags.stencil]: targets.includes(init.Tags.stencil),
-          [init.Tags.browser]: targets.includes(init.Tags.browser),
-          [init.Tags.node]: targets.includes(init.Tags.node),
-          [init.Tags.typescript]: targets.includes(init.Tags.typescript)
-        })
+    function getPlugins(targets: Tags[]) {
+      const tags: Tags[] = getApplicationTypeChoices({
+        [Tags.angular]: targets.includes(Tags.angular),
+        [Tags.react]: targets.includes(Tags.react),
+        [Tags.stencil]: targets.includes(Tags.stencil),
+        [Tags.browser]: targets.includes(Tags.browser),
+        [Tags.node]: targets.includes(Tags.node),
+        [Tags.typescript]: targets.includes(Tags.typescript)
+      })
         .filter(c => c.checked)
         .reduce((all, choice) => all.concat(choice.value), []);
 
@@ -421,7 +420,7 @@ describe('init', () => {
     }
 
     it('node', () => {
-      const { available, selected } = getPlugins([init.Tags.node]);
+      const { available, selected } = getPlugins([Tags.node]);
 
       // available
       expect(available).toHaveLength(3);
@@ -435,7 +434,7 @@ describe('init', () => {
     });
 
     it('node + typescript', () => {
-      const { selected, available } = getPlugins([init.Tags.node, init.Tags.typescript]);
+      const { selected, available } = getPlugins([Tags.node, Tags.typescript]);
 
       // available
       expect(available).toHaveLength(3);
@@ -449,7 +448,7 @@ describe('init', () => {
     });
 
     it('angular', () => {
-      const { selected, available } = getPlugins([init.Tags.angular]);
+      const { selected, available } = getPlugins([Tags.angular]);
 
       // available
       expect(available).toHaveLength(5);
@@ -466,7 +465,7 @@ describe('init', () => {
     });
 
     it('react', () => {
-      const { selected, available } = getPlugins([init.Tags.react]);
+      const { selected, available } = getPlugins([Tags.react]);
 
       // available
       expect(available).toHaveLength(5);
@@ -483,7 +482,7 @@ describe('init', () => {
     });
 
     it('react + typescript', () => {
-      const { selected, available } = getPlugins([init.Tags.react, init.Tags.typescript]);
+      const { selected, available } = getPlugins([Tags.react, Tags.typescript]);
 
       // available
       expect(available).toHaveLength(5);
@@ -500,7 +499,7 @@ describe('init', () => {
     });
 
     it('stencil', () => {
-      const { selected, available } = getPlugins([init.Tags.stencil]);
+      const { selected, available } = getPlugins([Tags.stencil]);
 
       // available
       expect(available).toHaveLength(5);
@@ -517,7 +516,7 @@ describe('init', () => {
     });
 
     it('vanilla', () => {
-      const { selected, available } = getPlugins([init.Tags.browser]);
+      const { selected, available } = getPlugins([Tags.browser]);
 
       // available
       expect(available).toHaveLength(4);
