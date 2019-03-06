@@ -27,13 +27,14 @@ function log(...msgs: string[]) {
   console.log(...msgs);
 }
 
+// KAMIL: react has some ts packages selected by default (we might want to change it because of flow)
 export const plugins: Array<PluginOption> = [
   {
     name: `TypeScript ${chalk.italic('(required by other typescript plugins)')}`,
     package: 'graphql-codegen-typescript',
     value: 'typescript',
     available: () => true,
-    shouldBeSelected: tags => tags.includes(Tags.angular) || tags.includes(Tags.typescript)
+    shouldBeSelected: tags => tags.includes(Tags.angular) || tags.includes(Tags.react) || tags.includes(Tags.typescript)
   },
   {
     name: `TypeScript Operations ${chalk.italic('(operations and fragments)')}`,
@@ -41,7 +42,9 @@ export const plugins: Array<PluginOption> = [
     value: 'typescript-operations',
     available: hasTag(Tags.browser),
     shouldBeSelected: tags =>
-      tags.includes(Tags.angular) || (tags.includes(Tags.typescript) && tags.includes(Tags.browser))
+      tags.includes(Tags.angular) ||
+      tags.includes(Tags.react) ||
+      (tags.includes(Tags.typescript) && tags.includes(Tags.browser))
   },
   {
     name: `TypeScript Resolvers ${chalk.italic('(strongly typed resolve functions)')}`,
@@ -122,7 +125,7 @@ export async function init() {
       name: 'schema',
       message: 'Where is your schema?:',
       suffix: chalk.grey(' (path or url)'),
-      default: 'https://localhost:4000', // matches Apollo Server's default
+      default: 'http://localhost:4000', // matches Apollo Server's default
       validate: (str: string) => str.length > 0
     },
     {
@@ -327,26 +330,26 @@ export function getApplicationTypeChoices(possibleTargets: Record<Tags, boolean>
     {
       name: 'Backend - API or server',
       key: 'backend',
-      value: [Tags.node],
+      value: [Tags.node, Tags.typescript],
       checked: possibleTargets.Node
     },
     {
       name: 'Application built with Angular',
       key: 'angular',
-      value: [Tags.angular, Tags.browser],
+      value: [Tags.angular, Tags.browser, Tags.typescript],
       checked: possibleTargets.Angular
     },
     {
       name: 'Application built with React',
       key: 'react',
-      value: [Tags.react, Tags.browser],
+      value: [Tags.react, Tags.browser, Tags.typescript],
       checked: possibleTargets.React
     },
     {
       name: 'Application built with other framework or vanilla JS',
       key: 'client',
-      value: [Tags.browser],
-      checked: false
+      value: [Tags.browser, Tags.typescript],
+      checked: possibleTargets.Browser && !possibleTargets.Angular && !possibleTargets.React
     }
   ];
 }
