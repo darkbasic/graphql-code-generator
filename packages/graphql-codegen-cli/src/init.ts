@@ -11,9 +11,10 @@ interface PluginOption {
   package: string;
   value: string;
   available(tags: Tags[]): boolean;
+  shouldBeSelected(tags: Tags[]): boolean;
 }
 
-enum Tags {
+export enum Tags {
   browser = 'Browser',
   node = 'Node',
   typescript = 'TypeScript',
@@ -28,68 +29,61 @@ function log(...msgs: string[]) {
 
 export const plugins: Array<PluginOption> = [
   {
-    name: `TypeScript Common ${chalk.italic('(required by client and server plugins)')}`,
-    package: 'graphql-codegen-typescript-common',
-    value: 'typescript-common',
-    available: () => true
+    name: `TypeScript ${chalk.italic('(required by other typescript plugins)')}`,
+    package: 'graphql-codegen-typescript',
+    value: 'typescript',
+    available: () => true,
+    shouldBeSelected: tags => tags.includes(Tags.angular) || tags.includes(Tags.typescript)
   },
   {
-    name: `TypeScript Client ${chalk.italic('(operations and fragments)')}`,
-    package: 'graphql-codegen-typescript-client',
-    value: 'typescript-client',
-    available: tags => tags.some(tag => [Tags.browser].includes(tag))
-  },
-  {
-    name: `TypeScript Server ${chalk.italic('(GraphQL Schema)')}`,
-    package: 'graphql-codegen-typescript-server',
-    value: 'typescript-server',
-    available: tags => tags.some(tag => [Tags.browser, Tags.node].includes(tag))
+    name: `TypeScript Operations ${chalk.italic('(operations and fragments)')}`,
+    package: 'graphql-codegen-typescript-operations',
+    value: 'typescript-operations',
+    available: hasTag(Tags.browser),
+    shouldBeSelected: tags =>
+      tags.includes(Tags.angular) || (tags.includes(Tags.typescript) && tags.includes(Tags.browser))
   },
   {
     name: `TypeScript Resolvers ${chalk.italic('(strongly typed resolve functions)')}`,
     package: 'graphql-codegen-typescript-resolvers',
     value: 'typescript-resolvers',
-    available: tags => tags.some(tag => [Tags.node].includes(tag))
+    available: hasTag(Tags.node),
+    shouldBeSelected: tags => tags.includes(Tags.typescript) && tags.includes(Tags.node)
   },
   {
     name: `TypeScript Apollo Angular ${chalk.italic('(GQL services)')}`,
     package: 'graphql-codegen-typescript-apollo-angular',
     value: 'typescript-apollo-angular',
-    available: tags => {
-      const hasAngular = tags.includes(Tags.angular);
-      const noReact = !tags.includes(Tags.react);
-
-      return hasAngular && noReact;
-    }
+    available: hasTag(Tags.angular),
+    shouldBeSelected: () => true
   },
   {
     name: `TypeScript React Apollo ${chalk.italic('(typed components and HOCs)')}`,
     package: 'graphql-codegen-typescript-react-apollo',
     value: 'typescript-react-apollo',
-    available: tags => {
-      const hasReact = tags.includes(Tags.react);
-      const noAngular = !tags.includes(Tags.angular);
-
-      return hasReact && noAngular;
-    }
+    available: hasTag(Tags.react),
+    shouldBeSelected: () => true
   },
   {
     name: `TypeScript MongoDB ${chalk.italic('(typed MongoDB objects)')}`,
     package: 'graphql-codegen-typescript-mongodb',
     value: 'typescript-mongodb',
-    available: tags => tags.includes(Tags.node)
+    available: hasTag(Tags.node),
+    shouldBeSelected: () => false
   },
   {
     name: `TypeScript GraphQL files modules ${chalk.italic('(declarations for .graphql files)')}`,
     package: 'graphql-codegen-typescript-graphql-files-modules',
     value: 'typescript-graphql-files-modules',
-    available: tags => tags.includes(Tags.browser)
+    available: hasTag(Tags.browser),
+    shouldBeSelected: () => false
   },
   {
     name: `Introspection Fragment Matcher ${chalk.italic('(for Apollo Client)')}`,
     package: 'graphql-codegen-fragment-matcher',
     value: 'fragment-matcher',
-    available: tags => tags.includes(Tags.browser)
+    available: hasTag(Tags.browser),
+    shouldBeSelected: () => false
   }
 ];
 
@@ -121,32 +115,7 @@ export async function init() {
       type: 'checkbox',
       name: 'targets',
       message: `What type of application are you building?`,
-      choices: [
-        {
-          name: 'Backend - API or server',
-          key: 'backend',
-          value: [Tags.node],
-          checked: possibleTargets.Node
-        },
-        {
-          name: 'Application built with Angular',
-          key: 'angular',
-          value: [Tags.angular, Tags.browser],
-          checked: possibleTargets.Angular
-        },
-        {
-          name: 'Application built with React',
-          key: 'react',
-          value: [Tags.react, Tags.browser],
-          checked: possibleTargets.React
-        },
-        {
-          name: 'Application built with other framework or vanilla JS',
-          key: 'client',
-          value: [Tags.browser],
-          checked: false
-        }
-      ]
+      choices: getApplicationTypeChoices(possibleTargets)
     },
     {
       type: 'input',
@@ -174,17 +143,7 @@ export async function init() {
       type: 'checkbox',
       name: 'plugins',
       message: 'Pick plugins:',
-      choices: answers => {
-        return plugins
-          .filter(p => p.available(answers.targets))
-          .map<inquirer.ChoiceType>(p => {
-            return {
-              name: p.name,
-              value: p,
-              checked: p.value === 'typescript-common'
-            };
-          });
-      },
+      choices: getPluginChoices,
       validate: (plugins: any[]) => plugins.length > 0
     },
     {
@@ -257,14 +216,14 @@ export async function init() {
 }
 
 // adds an introspection to `generates`
-function addIntrospection(config: Types.Config) {
+export function addIntrospection(config: Types.Config) {
   config.generates['./graphql.schema.json'] = {
     plugins: ['introspection']
   };
 }
 
 // Parses config and writes it to a file
-function writeConfig(answers: Answers, config: Types.Config) {
+export function writeConfig(answers: Answers, config: Types.Config) {
   const ext = answers.config.toLocaleLowerCase().endsWith('.json') ? 'json' : 'yml';
   const content = ext === 'json' ? JSON.stringify(config) : YAML.stringify(config);
   const fullPath = resolve(process.cwd(), answers.config);
@@ -281,7 +240,7 @@ function writeConfig(answers: Answers, config: Types.Config) {
 }
 
 // Updates package.json (script and plugins as dependencies)
-function writePackage(answers: Answers, configLocation: string) {
+export function writePackage(answers: Answers, configLocation: string) {
   // script
   const pkgPath = resolve(process.cwd(), 'package.json');
   const pkgContent = readFileSync(pkgPath, {
@@ -345,4 +304,49 @@ function isReact(dependencies: string[]): boolean {
 
 function isTypescript(dependencies: string[]): boolean {
   return dependencies.includes('typescript');
+}
+
+function hasTag(tag: Tags) {
+  return (tags: Tags[]) => tags.includes(tag);
+}
+
+export function getPluginChoices(answers: Answers) {
+  return plugins
+    .filter(p => p.available(answers.targets))
+    .map<inquirer.ChoiceType>(p => {
+      return {
+        name: p.name,
+        value: p,
+        checked: p.shouldBeSelected(answers.targets)
+      };
+    });
+}
+
+export function getApplicationTypeChoices(possibleTargets: Record<Tags, boolean>) {
+  return [
+    {
+      name: 'Backend - API or server',
+      key: 'backend',
+      value: [Tags.node],
+      checked: possibleTargets.Node
+    },
+    {
+      name: 'Application built with Angular',
+      key: 'angular',
+      value: [Tags.angular, Tags.browser],
+      checked: possibleTargets.Angular
+    },
+    {
+      name: 'Application built with React',
+      key: 'react',
+      value: [Tags.react, Tags.browser],
+      checked: possibleTargets.React
+    },
+    {
+      name: 'Application built with other framework or vanilla JS',
+      key: 'client',
+      value: [Tags.browser],
+      checked: false
+    }
+  ];
 }
