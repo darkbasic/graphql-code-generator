@@ -74,11 +74,23 @@ export function getQuestions(possibleTargets: Record<Tags, boolean>): inquirer.Q
 }
 
 export function getApplicationTypeChoices(possibleTargets: Record<Tags, boolean>) {
+  function withFlowOrTypescript(tags: Tags[]) {
+    if (possibleTargets.TypeScript) {
+      tags.push(Tags.typescript);
+    } else if (possibleTargets.Flow) {
+      tags.push(Tags.flow);
+    } else {
+      tags.push(Tags.flow, Tags.typescript);
+    }
+
+    return tags;
+  }
+
   return [
     {
       name: 'Backend - API or server',
       key: 'backend',
-      value: [Tags.node, Tags.typescript],
+      value: withFlowOrTypescript([Tags.node]),
       checked: possibleTargets.Node
     },
     {
@@ -90,7 +102,7 @@ export function getApplicationTypeChoices(possibleTargets: Record<Tags, boolean>
     {
       name: 'Application built with React',
       key: 'react',
-      value: [Tags.react, Tags.browser, Tags.typescript],
+      value: withFlowOrTypescript([Tags.react, Tags.browser]),
       checked: possibleTargets.React
     },
     {
@@ -102,7 +114,7 @@ export function getApplicationTypeChoices(possibleTargets: Record<Tags, boolean>
     {
       name: 'Application built with other framework or vanilla JS',
       key: 'client',
-      value: [Tags.browser, Tags.typescript],
+      value: [Tags.browser, Tags.typescript, Tags.flow],
       checked: possibleTargets.Browser && !possibleTargets.Angular && !possibleTargets.React && !possibleTargets.Stencil
     }
   ];

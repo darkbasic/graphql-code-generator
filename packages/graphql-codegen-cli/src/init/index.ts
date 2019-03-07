@@ -1,11 +1,9 @@
 import * as inquirer from 'inquirer';
-import chalk from 'chalk';
 import { Types } from 'graphql-codegen-core';
 import { getQuestions } from './questions';
-import {} from './plugins';
 import { guessTargets } from './targets';
 import { Answers, Tags } from './types';
-import { writeConfig, writePackage } from './helpers';
+import { writeConfig, writePackage, bold } from './helpers';
 
 function log(...msgs: string[]) {
   // tslint:disable-next-line
@@ -14,7 +12,7 @@ function log(...msgs: string[]) {
 
 export async function init() {
   log(`
-    Welcome to ${chalk.bold('GraphQL Code Generator')}!
+    Welcome to ${bold('GraphQL Code Generator')}!
     Answer few questions and we will setup everything for you.
   `);
 
@@ -47,13 +45,13 @@ export async function init() {
 
   // Emit status to the terminal
   log(`
-    Config file generated at ${chalk.bold(relativePath)}
+    Config file generated at ${bold(relativePath)}
     
-      ${chalk.bold('$ npm install')}
+      ${bold('$ npm install')}
 
     To install the plugins.
 
-      ${chalk.bold(`$ npm run ${answers.script}`)}
+      ${bold(`$ npm run ${answers.script}`)}
 
     To run GraphQL Code Generator.
   `);

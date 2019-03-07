@@ -1,29 +1,49 @@
 import { italic } from './helpers';
 import { PluginOption, Tags } from './types';
 
-// KAMIL: react has some ts packages selected by default (we might want to change it because of flow)
 export const plugins: Array<PluginOption> = [
   {
     name: `TypeScript ${italic('(required by other typescript plugins)')}`,
     package: 'graphql-codegen-typescript',
     value: 'typescript',
-    available: () => true,
-    shouldBeSelected: tags => oneOf(tags, Tags.angular, Tags.stencil, Tags.react, Tags.typescript)
+    available: hasTag(Tags.typescript),
+    shouldBeSelected: tags =>
+      oneOf(tags, Tags.angular, Tags.stencil) || allOf(tags, Tags.typescript, Tags.react) || noneOf(tags, Tags.flow)
   },
   {
     name: `TypeScript Operations ${italic('(operations and fragments)')}`,
     package: 'graphql-codegen-typescript-operations',
     value: 'typescript-operations',
-    available: hasTag(Tags.browser),
-    shouldBeSelected: tags =>
-      oneOf(tags, Tags.angular, Tags.stencil, Tags.react) || allOf(tags, Tags.typescript, Tags.browser)
+    available: tags => allOf(tags, Tags.browser, Tags.typescript),
+    shouldBeSelected: tags => oneOf(tags, Tags.angular, Tags.stencil) || allOf(tags, Tags.typescript, Tags.react)
   },
   {
     name: `TypeScript Resolvers ${italic('(strongly typed resolve functions)')}`,
     package: 'graphql-codegen-typescript-resolvers',
     value: 'typescript-resolvers',
-    available: hasTag(Tags.node),
-    shouldBeSelected: tags => allOf(tags, Tags.typescript, Tags.node)
+    available: tags => allOf(tags, Tags.node, Tags.typescript),
+    shouldBeSelected: tags => noneOf(tags, Tags.flow)
+  },
+  {
+    name: `Flow ${italic('(required by other flow plugins)')}`,
+    package: 'graphql-codegen-flow',
+    value: 'flow',
+    available: hasTag(Tags.flow),
+    shouldBeSelected: tags => noneOf(tags, Tags.typescript)
+  },
+  {
+    name: `Flow Operations ${italic('(operations and fragments)')}`,
+    package: 'graphql-codegen-flow-operations',
+    value: 'flow-operations',
+    available: tags => allOf(tags, Tags.browser, Tags.flow),
+    shouldBeSelected: tags => noneOf(tags, Tags.typescript)
+  },
+  {
+    name: `Flow Resolvers ${italic('(strongly typed resolve functions)')}`,
+    package: 'graphql-codegen-flow-resolvers',
+    value: 'flow-resolvers',
+    available: tags => allOf(tags, Tags.node, Tags.flow),
+    shouldBeSelected: tags => noneOf(tags, Tags.typescript)
   },
   {
     name: `TypeScript Apollo Angular ${italic('(typed GQL services)')}`,
@@ -36,7 +56,7 @@ export const plugins: Array<PluginOption> = [
     name: `TypeScript React Apollo ${italic('(typed components and HOCs)')}`,
     package: 'graphql-codegen-typescript-react-apollo',
     value: 'typescript-react-apollo',
-    available: hasTag(Tags.react),
+    available: tags => allOf(tags, Tags.react, Tags.typescript),
     shouldBeSelected: () => true
   },
   {
@@ -50,14 +70,14 @@ export const plugins: Array<PluginOption> = [
     name: `TypeScript MongoDB ${italic('(typed MongoDB objects)')}`,
     package: 'graphql-codegen-typescript-mongodb',
     value: 'typescript-mongodb',
-    available: hasTag(Tags.node),
+    available: tags => allOf(tags, Tags.node, Tags.typescript),
     shouldBeSelected: () => false
   },
   {
     name: `TypeScript GraphQL files modules ${italic('(declarations for .graphql files)')}`,
     package: 'graphql-codegen-typescript-graphql-files-modules',
     value: 'typescript-graphql-files-modules',
-    available: hasTag(Tags.browser),
+    available: tags => allOf(tags, Tags.browser, Tags.typescript),
     shouldBeSelected: () => false
   },
   {
@@ -75,6 +95,10 @@ function hasTag(tag: Tags) {
 
 function oneOf<T>(list: T[], ...items: T[]): boolean {
   return list.some(i => items.includes(i));
+}
+
+function noneOf<T>(list: T[], ...items: T[]): boolean {
+  return !list.some(i => items.includes(i));
 }
 
 function allOf<T>(list: T[], ...items: T[]): boolean {

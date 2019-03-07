@@ -21,6 +21,7 @@ export enum Tags {
   browser = 'Browser',
   node = 'Node',
   typescript = 'TypeScript',
+  flow = 'Flow',
   angular = 'Angular',
   stencil = 'Stencil',
   react = 'React'

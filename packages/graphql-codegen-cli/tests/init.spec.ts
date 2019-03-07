@@ -1,10 +1,10 @@
 jest.mock('fs');
 import * as bddStdin from 'bdd-stdin';
 import { resolve } from 'path';
-import chalk from 'chalk';
 import { init } from '../src/init';
 import { Tags } from '../src/init/types';
 import { guessTargets } from '../src/init/targets';
+import { bold } from '../src/init/helpers';
 import { parseConfigFile } from '../src/yml';
 import { getApplicationTypeChoices, getPluginChoices } from '../src/init/questions';
 const { version } = require('../package.json');
@@ -30,6 +30,12 @@ const packageJson = {
     version,
     dependencies: {
       react: 'x.x.x'
+    }
+  }),
+  withFlow: JSON.stringify({
+    version,
+    devDependencies: {
+      flow: 'x.x.x'
     }
   }),
   withStencil: JSON.stringify({
@@ -73,6 +79,12 @@ describe('init', () => {
     require('fs').__setMockFiles(resolve(process.cwd(), 'package.json'), packageJson.withStencil);
     const targets = await guessTargets();
     expect(targets.Stencil).toEqual(true);
+  });
+
+  it('should guess flow projects', async () => {
+    require('fs').__setMockFiles(resolve(process.cwd(), 'package.json'), packageJson.withFlow);
+    const targets = await guessTargets();
+    expect(targets.Flow).toEqual(true);
   });
 
   it('should use angular related plugins when @angular/core is found', async () => {
@@ -280,7 +292,7 @@ describe('init', () => {
     expect(config.schema).toEqual(defaults.schema);
     expect(config.documents).toEqual(defaults.documents);
     expect(config.generates[defaults.output]).toBeDefined();
-    expect(logSpy.mock.calls[1][0]).toContain(`Config file generated at ${chalk.bold(defaults.config)}`);
+    expect(logSpy.mock.calls[1][0]).toContain(`Config file generated at ${bold(defaults.config)}`);
   });
 
   it('should have few default values', async () => {
@@ -320,7 +332,7 @@ describe('init', () => {
     expect(config.schema).toEqual(options.schema);
     expect(config.documents).toEqual(options.documents);
     expect(config.generates[options.output]).toBeDefined();
-    expect(logSpy.mock.calls[1][0]).toContain(`Config file generated at ${chalk.bold(options.config)}`);
+    expect(logSpy.mock.calls[1][0]).toContain(`Config file generated at ${bold(options.config)}`);
   });
 
   it('custom setup', async () => {
@@ -380,10 +392,10 @@ describe('init', () => {
     const welcomeMsg = logSpy.mock.calls[0][0];
     const doneMsg = logSpy.mock.calls[1][0];
 
-    expect(welcomeMsg).toContain(`Welcome to ${chalk.bold('GraphQL Code Generator')}`);
-    expect(doneMsg).toContain(`Config file generated at ${chalk.bold('codegen.yml')}`);
-    expect(doneMsg).toContain(chalk.bold('$ npm install'));
-    expect(doneMsg).toContain(chalk.bold(`$ npm run ${script}`));
+    expect(welcomeMsg).toContain(`Welcome to ${bold('GraphQL Code Generator')}`);
+    expect(doneMsg).toContain(`Config file generated at ${bold('codegen.yml')}`);
+    expect(doneMsg).toContain(bold('$ npm install'));
+    expect(doneMsg).toContain(bold(`$ npm run ${script}`));
   });
 
   describe('plugin choices', () => {
@@ -408,7 +420,8 @@ describe('init', () => {
         [Tags.stencil]: targets.includes(Tags.stencil),
         [Tags.browser]: targets.includes(Tags.browser),
         [Tags.node]: targets.includes(Tags.node),
-        [Tags.typescript]: targets.includes(Tags.typescript)
+        [Tags.typescript]: targets.includes(Tags.typescript),
+        [Tags.flow]: targets.includes(Tags.flow)
       })
         .filter(c => c.checked)
         .reduce((all, choice) => all.concat(choice.value), []);
@@ -423,14 +436,14 @@ describe('init', () => {
       const { available, selected } = getPlugins([Tags.node]);
 
       // available
-      expect(available).toHaveLength(3);
+      expect(available).toHaveLength(5);
       expect(available).toContainEqual('typescript');
       expect(available).toContainEqual('typescript-resolvers');
       expect(available).toContainEqual('typescript-mongodb');
+      expect(available).toContainEqual('flow');
+      expect(available).toContainEqual('flow-resolvers');
       // selected
-      expect(selected).toHaveLength(2);
-      expect(selected).toContainEqual('typescript');
-      expect(selected).toContainEqual('typescript-resolvers');
+      expect(selected).toHaveLength(0);
     });
 
     it('node + typescript', () => {
@@ -445,6 +458,19 @@ describe('init', () => {
       expect(selected).toHaveLength(2);
       expect(selected).toContainEqual('typescript');
       expect(selected).toContainEqual('typescript-resolvers');
+    });
+
+    it('node + flow', () => {
+      const { selected, available } = getPlugins([Tags.node, Tags.flow]);
+
+      // available
+      expect(available).toHaveLength(2);
+      expect(available).toContainEqual('flow');
+      expect(available).toContainEqual('flow-resolvers');
+      // selected
+      expect(selected).toHaveLength(2);
+      expect(selected).toContainEqual('flow');
+      expect(selected).toContainEqual('flow-resolvers');
     });
 
     it('angular', () => {
@@ -468,11 +494,13 @@ describe('init', () => {
       const { selected, available } = getPlugins([Tags.react]);
 
       // available
-      expect(available).toHaveLength(5);
+      expect(available).toHaveLength(7);
       expect(available).toContainEqual('typescript');
       expect(available).toContainEqual('typescript-operations');
       expect(available).toContainEqual('typescript-react-apollo');
       expect(available).toContainEqual('typescript-graphql-files-modules');
+      expect(available).toContainEqual('flow');
+      expect(available).toContainEqual('flow-operations');
       expect(available).toContainEqual('fragment-matcher');
       // selected
       expect(selected).toHaveLength(3);
@@ -498,6 +526,20 @@ describe('init', () => {
       expect(selected).toContainEqual('typescript-react-apollo');
     });
 
+    it('react + flow', () => {
+      const { selected, available } = getPlugins([Tags.react, Tags.flow]);
+
+      // available
+      expect(available).toHaveLength(3);
+      expect(available).toContainEqual('flow');
+      expect(available).toContainEqual('flow-operations');
+      expect(available).toContainEqual('fragment-matcher');
+      // selected
+      expect(selected).toHaveLength(2);
+      expect(selected).toContainEqual('flow');
+      expect(selected).toContainEqual('flow-operations');
+    });
+
     it('stencil', () => {
       const { selected, available } = getPlugins([Tags.stencil]);
 
@@ -519,15 +561,15 @@ describe('init', () => {
       const { selected, available } = getPlugins([Tags.browser]);
 
       // available
-      expect(available).toHaveLength(4);
+      expect(available).toHaveLength(6);
       expect(available).toContainEqual('typescript');
       expect(available).toContainEqual('typescript-operations');
       expect(available).toContainEqual('typescript-graphql-files-modules');
+      expect(available).toContainEqual('flow');
+      expect(available).toContainEqual('flow-operations');
       expect(available).toContainEqual('fragment-matcher');
       // selected
-      expect(selected).toHaveLength(2);
-      expect(selected).toContainEqual('typescript');
-      expect(selected).toContainEqual('typescript-operations');
+      expect(selected).toHaveLength(0);
     });
   });
 });

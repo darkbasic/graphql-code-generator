@@ -19,7 +19,8 @@ export async function guessTargets(): Promise<Record<Tags, boolean>> {
     [Tags.stencil]: isStencil(dependencies),
     [Tags.browser]: false,
     [Tags.node]: false,
-    [Tags.typescript]: isTypescript(dependencies)
+    [Tags.typescript]: isTypescript(dependencies),
+    [Tags.flow]: isFlow(dependencies)
   };
 }
 
@@ -37,4 +38,8 @@ function isStencil(dependencies: string[]): boolean {
 
 function isTypescript(dependencies: string[]): boolean {
   return dependencies.includes('typescript');
+}
+
+function isFlow(dependencies: string[]): boolean {
+  return dependencies.includes('flow');
 }
