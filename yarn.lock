@@ -4917,6 +4917,15 @@ graceful-fs@^4.1.11, graceful-fs@^4.1.15, graceful-fs@^4.1.2, graceful-fs@^4.1.6
   version "4.1.15"
   resolved "https://registry.yarnpkg.com/graceful-fs/-/graceful-fs-4.1.15.tgz#ffb703e1066e8a0eeaa4c8b80ba9253eeefbfb00"
 
+graphql-codegen-flow-documents@0.18.0:
+  version "0.18.0"
+  resolved "https://registry.yarnpkg.com/graphql-codegen-flow-documents/-/graphql-codegen-flow-documents-0.18.0.tgz#d9cb075ec6f443f47f0d63cf5f2da9862924e8f2"
+  integrity sha512-FfWUaJdLG4JAlaW5LNoeZIjhsInQUwTYo7MASYOxvxfTNkiWR1IGZLWt6s8+gUOpgABAr4s9uJuJsP+OPt5RCw==
+  dependencies:
+    graphql-codegen-core "0.18.0"
+    graphql-codegen-flow "0.18.0"
+    graphql-codegen-plugin-helpers "0.18.0"
+
 graphql-codegen-typescript-client@0.18.0:
   version "0.18.0"
   resolved "https://registry.yarnpkg.com/graphql-codegen-typescript-client/-/graphql-codegen-typescript-client-0.18.0.tgz#efce9762455b186ac5e50e4dfec3250d0299da51"
