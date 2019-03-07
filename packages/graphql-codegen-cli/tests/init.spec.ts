@@ -4,6 +4,7 @@ import { resolve } from 'path';
 import { init } from '../src/init';
 import { Tags } from '../src/init/types';
 import { guessTargets } from '../src/init/targets';
+import { plugins } from '../src/init/plugins';
 import { bold } from '../src/init/helpers';
 import { parseConfigFile } from '../src/yml';
 import { getApplicationTypeChoices, getPluginChoices } from '../src/init/questions';
@@ -570,6 +571,16 @@ describe('init', () => {
       expect(available).toContainEqual('fragment-matcher');
       // selected
       expect(selected).toHaveLength(0);
+    });
+  });
+
+  describe('plugins', () => {
+    it('should have correct plugin and package names', async () => {});
+    plugins.forEach(pkg => {
+      const { name } = require(`../../plugins/${pkg.value}/package.json`);
+
+      expect(pkg.package.replace('graphql-codegen-', '')).toEqual(pkg.value);
+      expect(pkg.package).toEqual(name);
     });
   });
 });
