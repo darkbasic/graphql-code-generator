@@ -107,7 +107,7 @@ export function getApplicationTypeChoices(possibleTargets: Record<Tags, boolean>
     },
     {
       name: 'Application built with Stencil',
-      key: 'react',
+      key: 'stencil',
       value: [Tags.stencil, Tags.browser, Tags.typescript],
       checked: possibleTargets.Stencil
     },
